@@ -19,6 +19,7 @@ RUN apk add --no-cache \
     jpeg-dev \
     freetype-dev \
     libmemcached-dev \
+    libmcrypt-dev \
     zlib-dev \
     git \
     pkgconf \
@@ -36,9 +37,13 @@ ENV CFLAGS="-O2 -DOPENSSL_API_COMPAT=0x10100000L"
 # 2. Compilar PHP 7.4 y memcached en un SOLO paso RUN
 RUN curl -L -o php-src.zip "https://github.com/php/php-src/archive/refs/heads/PHP-7.4-CVE-2026-109618-109619.zip" && \
     curl -L -o memcached.tgz "https://pecl.php.net/get/memcached-3.2.0.tgz" && \
+    curl -L -o apcu.tgz "https://pecl.php.net/get/apcu-5.1.24.tgz" && \
+    curl -L -o mcrypt.tgz "https://pecl.php.net/get/mcrypt-1.0.7.tgz" && \
     unzip php-src.zip && \
     tar -xzf memcached.tgz && \
-    rm php-src.zip memcached.tgz && \
+    tar -xzf apcu.tgz && \
+    tar -xzf mcrypt.tgz && \
+    rm php-src.zip memcached.tgz apcu.tgz mcrypt.tgz && \
     mv php-src-* php-src-dir && \
     cd php-src-dir && \
     ./buildconf --force && \
@@ -69,6 +74,7 @@ RUN curl -L -o php-src.zip "https://github.com/php/php-src/archive/refs/heads/PH
     --with-openssl \
     --enable-pcntl \
     --with-pdo-pgsql \
+    --with-pgsql \
     --enable-phar \
     --enable-session \
     --enable-simplexml \
@@ -77,6 +83,7 @@ RUN curl -L -o php-src.zip "https://github.com/php/php-src/archive/refs/heads/PH
     --with-zip \
     --enable-xml \
     --enable-xmlwriter \
+    --enable-xmlreader \
     --with-xsl \
     --enable-cli && \
     make -j$(nproc) && \
@@ -93,7 +100,19 @@ RUN curl -L -o php-src.zip "https://github.com/php/php-src/archive/refs/heads/PH
     ./configure --with-php-config=/usr/bin/php-config7 && \
     make -j$(nproc) && \
     make INSTALL_ROOT=/php-root install && \
-    echo "extension=memcached.so" > /php-root/etc/php7/conf.d/20_memcached.ini
+    echo "extension=memcached.so" > /php-root/etc/php7/conf.d/20_memcached.ini && \
+    cd /build/apcu-5.1.24 && \
+    /usr/bin/phpize7 && \
+    ./configure --with-php-config=/usr/bin/php-config7 && \
+    make -j$(nproc) && \
+    make INSTALL_ROOT=/php-root install && \
+    echo "extension=apcu.so" > /php-root/etc/php7/conf.d/20_apcu.ini && \
+    cd /build/mcrypt-1.0.7 && \
+    /usr/bin/phpize7 && \
+    ./configure --with-php-config=/usr/bin/php-config7 && \
+    make -j$(nproc) && \
+    make INSTALL_ROOT=/php-root install && \
+    echo "extension=mcrypt.so" > /php-root/etc/php7/conf.d/20_mcrypt.ini
 
 
 FROM alpine:3.15 AS cli
@@ -118,6 +137,7 @@ RUN apk --no-cache add \
     libjpeg-turbo \
     freetype \
     libmemcached-libs \
+    libmcrypt \
     sqlite-libs \
     zlib \
     curl \
