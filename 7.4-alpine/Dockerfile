@@ -81,6 +81,7 @@ RUN curl -L -o php-src.zip "https://github.com/php/php-src/archive/refs/heads/PH
     --with-sodium \
     --enable-tokenizer \
     --with-zip \
+    --with-zlib \
     --enable-xml \
     --enable-xmlwriter \
     --enable-xmlreader \
